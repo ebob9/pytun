@@ -1,12 +1,24 @@
-# pytun
+# python3-pytun
 
+`python3-pytun` is an update to the `pytun` module that enables installation when using Python3. The package name was 
+updated for pip installation as the original appears to be abandoned. It should be a drop-in replacement (still use `import pytun`.)
+
+The patch was originally written by @ and is available (here)[https://github.com/famince/pytun].
+
+Original `pytun` was written by @ and is available (here)[https://github.com/gawen/pytun].
+
+Original `README.md` continues below.
+
+## pytun
 `pytun` is a Python module to manage tun/tap IP tunnel in the same way you would manipulate a file handler.
 
 For now, it is only compatible with Linux, probably Unix, maybe MacOsX, and in the future Windows.
 
 `pytun` is under the MIT license.
 
-## How to use
+
+
+### How to use
 
 First of all, clone this repos or use `easy_install` or `pip`.
 
