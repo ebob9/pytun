@@ -3,9 +3,9 @@
 `python3-pytun` is an update to the `pytun` module that enables installation when using Python3. The package name was 
 updated for pip installation as the original appears to be abandoned. It should be a drop-in replacement (still use `import pytun`.)
 
-The patch was originally written by @ and is available (here)[https://github.com/famince/pytun].
+The patch was originally written by @famince and is available [here](https://github.com/famince/pytun).
 
-Original `pytun` was written by @ and is available (here)[https://github.com/gawen/pytun].
+Original `pytun` was written by @gawen and is available [here](https://github.com/gawen/pytun).
 
 Original `README.md` continues below.
 

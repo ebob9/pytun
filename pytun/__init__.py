@@ -9,7 +9,7 @@ __author__ = "Gawen Arab, Aaron Edwards"
 __copyright__ = "Copyright 2012, Gawen Arab"
 __credits__ = ["Gawen Arab", "Ben Lapid", "Aaron Edwards"]
 __license__ = "MIT"
-__version__ = "1.0.2"
+__version__ = "1.0.2.1"
 __maintainer__ = "Aaron Edwards"
 __email__ = "pytun@ebob9.com"
 __status__ = "Beta"
@@ -96,7 +96,7 @@ class Tunnel(object):
         if isinstance(self.mode, str):
             self.mode = self.MODES.get(self.mode, None)
 
-            assert self.mode is not None, "%r is not a valid tunnel type." % (self.mode,)
+            assert self.mode is not None, f"{self.mode} is not a valid tunnel type."
 
         if auto_open:
             self.open()
@@ -108,7 +108,7 @@ class Tunnel(object):
     def mode_name(self):
         """ Returns the tunnel mode's name, for printing purpose. """
 
-        for name, id in self.MODES.iteritems():
+        for name, id in iter(self.MODES.items()):  # replace of iteritems in python3
             if id == self.mode:
                 return name
 
@@ -119,30 +119,31 @@ class Tunnel(object):
     def open(self):
         """ Create the tunnel.
             If the tunnel is already opened, the function will
-            raised an AlreadyOpened exception.
+            raise an AlreadyOpened exception.
         """
 
         if self.fd is not None:
             raise self.AlreadyOpened()
 
-        logger.debug("Opening %s..." % (TUN_KO_PATH,))
+        logger.debug(f"Opening {TUN_KO_PATH}...")
         self.fd = os.open(TUN_KO_PATH, os.O_RDWR)
 
-        logger.debug("Opening %s tunnel '%s'..." % (self.mode_name.upper(), self.pattern,))
+        logger.debug(f"Opening {self.mode_name.upper()} tunnel '{self.pattern}'...")
         try:
-            ret = fcntl.ioctl(self.fd, self.TUNSETIFF, struct.pack("16sH", self.pattern, self.mode | self.no_pi))
+            ret = fcntl.ioctl(self.fd, self.TUNSETIFF, struct.pack("16sH", bytes(self.pattern, 'utf-8'),
+                                                                   self.mode | self.no_pi))
 
         except IOError as e:
             if e.errno == 1:
                 logger.error(
-                    "Cannot open a %s tunnel because the operation is not permitted." % (self.mode_name.upper(),))
+                    f"Cannot open a {self.mode_name.upper()} tunnel because the operation is not permitted.")
                 raise self.NotPermitted()
 
             raise
+        # logger.debug(f"Got ret of {ret}}")
+        self.name = ret[:16].strip(b"\x00")
 
-        self.name = ret[:16].strip("\x00")
-
-        logger.info("Tunnel '%s' opened." % (self.name,))
+        logger.info(f"Tunnel '{self.name.decode(encoding='utf-8')}' opened.")
 
     def close(self):
         """ Close the tunnel.
@@ -153,13 +154,13 @@ class Tunnel(object):
         if self.fd is None:
             return
 
-        logger.debug("Closing tunnel '%s'..." % (self.name or "",))
+        logger.debug(f"Closing tunnel '{self.name.decode(encoding='utf-8') or ''}'...")
 
         # Close tun.ko file
         os.close(self.fd)
         self.fd = None
 
-        logger.info("Tunnel '%s' closed." % (self.name or "",))
+        logger.info(f"Tunnel '{self.name.decode(encoding='utf-8') or ''}' closed.")
 
     def send(self, buf):
         """ Send the buffer 'buf'. """
@@ -191,14 +192,14 @@ class Tunnel(object):
         """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         bin_ip = socket.inet_aton(ip)
-        ifreq = struct.pack('16sH2s4s8s', self.name, socket.AF_INET, '\x00' * 2, bin_ip, '\x00' * 8)
+        ifreq = struct.pack('16sH2s4s8s', self.name, socket.AF_INET, b'\x00' * 2, bin_ip, b'\x00' * 8)
         fcntl.ioctl(sock, self.SIOCSIFADDR, ifreq)
         ifreq = struct.pack('16sH', self.name,
                             self.IFF_UP | self.IFF_POINTOPOINT | self.IFF_RUNNING | self.IFF_MULTICAST)
         fcntl.ioctl(sock, self.SIOCSIFFLAGS, ifreq)
 
     def __repr__(self):
-        return "<%s tunnel '%s'>" % (self.mode_name.capitalize(), self.name,)
+        return f"<{self.mode_name.capitalize()} tunnel '{self.name.decode(encoding='utf-8')}'>"
 
 
 class TunTunnel(Tunnel):
