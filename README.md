@@ -16,8 +16,6 @@ For now, it is only compatible with Linux, probably Unix, maybe MacOsX, and in t
 
 `pytun` is under the MIT license.
 
-
-
 ### How to use
 
 First of all, clone this repos or use `easy_install` or `pip`.

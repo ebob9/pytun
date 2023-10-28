@@ -9,7 +9,7 @@ __author__ = "Gawen Arab, Aaron Edwards"
 __copyright__ = "Copyright 2012, Gawen Arab"
 __credits__ = ["Gawen Arab", "Ben Lapid", "Aaron Edwards"]
 __license__ = "MIT"
-__version__ = "1.0.2.1"
+__version__ = "1.0.2.2"
 __maintainer__ = "Aaron Edwards"
 __email__ = "pytun@ebob9.com"
 __status__ = "Beta"
@@ -31,7 +31,7 @@ class Tunnel(object):
     """ tun/tap handler class """
 
     class AlreadyOpened(Exception):
-        """ Raised when the user try to open a already-opened
+        """ Raised when the user try to open an already-opened
             tunnel.
         """
         pass
@@ -74,7 +74,7 @@ class Tunnel(object):
             will automatically create the tunnel.
 
             If the argument 'no_pi' is true, the device will be
-            be opened with teh IFF_NO_PI flag. Otherwise, 4 extra
+            opened with teh IFF_NO_PI flag. Otherwise, 4 extra
             bytes are added to the beginning of the packet (2 flag
             bytes and 2 protocol bytes).
 
@@ -125,10 +125,12 @@ class Tunnel(object):
         if self.fd is not None:
             raise self.AlreadyOpened()
 
-        logger.debug(f"Opening {TUN_KO_PATH}...")
+        if self._logging_debug_enabled():
+            logger.debug(f"Opening {TUN_KO_PATH}...")
         self.fd = os.open(TUN_KO_PATH, os.O_RDWR)
 
-        logger.debug(f"Opening {self.mode_name.upper()} tunnel '{self.pattern}'...")
+        if self._logging_debug_enabled():
+            logger.debug(f"Opening {self._safe_str(self.mode_name).upper()} tunnel ...")
         try:
             ret = fcntl.ioctl(self.fd, self.TUNSETIFF, struct.pack("16sH", bytes(self.pattern, 'utf-8'),
                                                                    self.mode | self.no_pi))
@@ -136,14 +138,16 @@ class Tunnel(object):
         except IOError as e:
             if e.errno == 1:
                 logger.error(
-                    f"Cannot open a {self.mode_name.upper()} tunnel because the operation is not permitted.")
+                    f"Cannot open a {self._safe_str(self.mode_name).upper()} tunnel because the operation is not "
+                    f"permitted.")
                 raise self.NotPermitted()
 
             raise
         # logger.debug(f"Got ret of {ret}}")
         self.name = ret[:16].strip(b"\x00")
 
-        logger.info(f"Tunnel '{self.name.decode(encoding='utf-8')}' opened.")
+        if self._logging_info_enabled():
+            logger.info(f"Tunnel '{self._safe_str(self.name)}' opened.")
 
     def close(self):
         """ Close the tunnel.
@@ -154,13 +158,15 @@ class Tunnel(object):
         if self.fd is None:
             return
 
-        logger.debug(f"Closing tunnel '{self.name.decode(encoding='utf-8') or ''}'...")
+        if self._logging_debug_enabled():
+            logger.debug(f"Closing tunnel '{self._safe_str(self.name)}'...")
 
         # Close tun.ko file
         os.close(self.fd)
         self.fd = None
 
-        logger.info(f"Tunnel '{self.name.decode(encoding='utf-8') or ''}' closed.")
+        if self._logging_info_enabled():
+            logger.info(f"Tunnel '{self._safe_str(self.name)}' closed.")
 
     def send(self, buf):
         """ Send the buffer 'buf'. """
@@ -199,7 +205,30 @@ class Tunnel(object):
         fcntl.ioctl(sock, self.SIOCSIFFLAGS, ifreq)
 
     def __repr__(self):
-        return f"<{self.mode_name.capitalize()} tunnel '{self.name.decode(encoding='utf-8')}'>"
+        return f"<{self._safe_str(self.mode_name).capitalize()} tunnel '{self._safe_str(self.name)}'>"
+
+    @staticmethod
+    def _safe_str(variable):
+        """Cast whatever is sent to string for debug output.
+        """
+        if isinstance(variable, str):
+            return variable
+        elif isinstance(variable, bytes):
+            return variable.decode(encoding='utf-8')
+        elif variable is None:
+            return "None"
+
+    @staticmethod
+    def _logging_debug_enabled():
+        """Check before expanding debug functions
+        """
+        return logger.isEnabledFor(logging.DEBUG)
+
+    @staticmethod
+    def _logging_info_enabled():
+        """Check before expanding info functions
+        """
+        return logger.isEnabledFor(logging.INFO)
 
 
 class TunTunnel(Tunnel):

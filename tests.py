@@ -9,46 +9,47 @@ except ImportError as e:
     SCAPY_AVAILABLE = False
 
 
-def pprint_buf(buf):
-    """ Dirty & convenient function to display the hexademical
-        repr. of a buffer.
-    """
-
-    DEFAULT_SIZE = 4
-
-    def hex2(i, l = None):
-        l = l if l is not None else DEFAULT_SIZE
-
-        h = hex(i).upper()[2:]
-
-        if len(h) != l:
-            h = "0" * (l - len(h)) + h
-
-        return h
-
-    def displayable_char(test_c):
-        if not str.isprintable(str(test_c)):
-            test_c = "."
-        return str(test_c)
-
-    print(" " * DEFAULT_SIZE, end="")
-    for i in range(16):
-        print(hex2(i, 2), end="")
-    print("")
-
-    raws = []
-    for i, c in enumerate(buf):
-        if i % 16 == 0:
-            if i:
-                print("\t" + "".join(raws))
-                raws = []
-
-            print(hex2(i), end="")
-        raws.append(displayable_char(c))
-
-        print(hex2(ord(str(c)), 2),)
-
-    print("   " * (15 - (i % 16)) + "\t" + "".join(raws))
+# new printing with scapy (if avail) or raw HEX as this code is funky to convert to py3, or I just am lazy!
+# def pprint_buf(buf):
+#     """ Dirty & convenient function to display the hexademical
+#         repr. of a buffer.
+#     """
+#
+#     DEFAULT_SIZE = 4
+#
+#     def hex2(i, l = None):
+#         l = l if l is not None else DEFAULT_SIZE
+#
+#         h = hex(i).upper()[2:]
+#
+#         if len(h) != l:
+#             h = "0" * (l - len(h)) + h
+#
+#         return h
+#
+#     def displayable_char(test_c):
+#         if not str.isprintable(str(test_c)):
+#             test_c = "."
+#         return str(test_c)
+#
+#     print(" " * DEFAULT_SIZE, end="")
+#     for i in range(16):
+#         print(hex2(i, 2), end="")
+#     print("")
+#
+#     raws = []
+#     for i, c in enumerate(buf):
+#         if i % 16 == 0:
+#             if i:
+#                 print("\t" + "".join(raws))
+#                 raws = []
+#
+#             print(hex2(i), end="")
+#         raws.append(displayable_char(c))
+#
+#         print(hex2(ord(str(c)), 2),)
+#
+#     print("   " * (15 - (i % 16)) + "\t" + "".join(raws))
 
 
 def main():
@@ -100,7 +101,10 @@ def main():
             buf = tun.recv()
             if SCAPY_AVAILABLE:
                 from scapy.layers.tuntap import LinuxTunPacketInfo
-                #packet = scapy.Packet(buf)
+                # packet = scapy.Packet(buf)
+                # since we are calling open() default, IFF_NO_PI will not be set. That means 4 bytes
+                # on the packet header, which needs LinuxTunPacketInfo in scapy to decode.
+                # if IFF_NO_PI (no_pi=True), then you could use TunPacketInfo() instead.
                 tun_packet = LinuxTunPacketInfo(buf)
                 pytun.logger.info("Packet received!")
                 pytun.logger.debug("\n" + tun_packet.show2(dump=True))
@@ -109,7 +113,7 @@ def main():
             else:
                 pytun.logger.info("Packet received! Raw HEX:")
                 pytun.logger.debug(f"\n{buf.hex(' ', 2)}\m")
-                #pprint_buf(buf)
+                # pprint_buf(buf)
             print("")
 
     except KeyboardInterrupt:
